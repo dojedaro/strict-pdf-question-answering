@@ -1,103 +1,67 @@
-📄 PDF Grounded Question Answering
+# Strict PDF Question Answering
 
-A minimal PDF Question Answering pipeline that extracts text from PDF documents and answers user questions using the OpenAI Chat Completions API, while enforcing strict document grounding to prevent hallucinations.
+**The smallest useful grounded QA system: answer questions about a PDF from its text alone, and say so plainly when the answer isn't in it.**
 
-The system is designed to respond only with information explicitly present in the PDF. If a question cannot be answered from the document, the system clearly states that the information is not included.
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/dojedaro/strict-pdf-question-answering/blob/main/pdf_qa_strict_grounding.ipynb)
+[![Notebook checks](https://github.com/dojedaro/strict-pdf-question-answering/actions/workflows/notebooks.yml/badge.svg)](https://github.com/dojedaro/strict-pdf-question-answering/actions/workflows/notebooks.yml)
 
-🎯 Project Objectives
+> Part of a series of RAG projects: **strict PDF QA** ·
+> [PDF RAG + ReAct agent](https://github.com/dojedaro/pdf-rag-react-agent-langchain) ·
+> [policy QA with evaluation](https://github.com/dojedaro/openai-rag-policy-qa-evaluation) ·
+> [10-K retrieval evaluation](https://github.com/dojedaro/coca-cola-10k-retrieval-evaluation) ·
+> [research-paper RAG](https://github.com/dojedaro/research-paper-rag-qa-system)
 
-Extract and process text from PDF documents
+## Example run
 
-Enable natural language Q&A over document content
+On a mutual-fund factsheet (Nippon India Short Term Fund):
 
-Enforce strict grounding to eliminate external knowledge usage
+| Question | Answer | Behavior |
+|---|---|---|
+| What is the current investment strategy? | Invests mainly in corporate bonds, G-Secs and money-market instruments in the 1–5 year duration bucket… | grounded summary |
+| What is the % of assets for Commercial Paper? | 0.82% | exact figure from a table |
+| What is happening in Canada and Korea now? | "I cannot provide an answer as this information is not included in the PDF document." | refusal |
 
-Produce deterministic and reproducible answers
+Three questions show the intended behavior; they aren't an evaluation (see next steps).
 
-🧠 System Overview
+## How it works
 
-PDF Ingestion
+```mermaid
+flowchart LR
+    P[PDF upload] --> X[pypdf: extract<br/>text page by page]
+    X --> C[Whole document<br/>as context]
+    Q([question]) --> M
+    C --> M[Chat Completions<br/>strict system prompt<br/>temperature 0]
+    M --> A([answer or<br/>explicit refusal])
+```
 
-User uploads a PDF file
+There's no retrieval: the full text goes into every request. That keeps the system simple and makes
+grounding easy to reason about, at the cost of a context-window limit on document size. The system
+prompt forbids outside knowledge and fixes the refusal sentence, and temperature 0 keeps answers
+repeatable.
 
-Text is extracted page-by-page using pypdf
+## Run it
 
-Text Processing
+```bash
+pip install -r requirements.txt
+export OPENAI_API_KEY=...   # read from the environment, never hard-coded
+jupyter notebook pdf_qa_strict_grounding.ipynb
+```
 
-Extracted text is combined into a single context
+The notebook uses `gpt-3.5-turbo`; any current chat model works with the same prompt.
 
-No external data sources are used
+## Stack
 
-Grounded Question Answering
+Python, pypdf, OpenAI Chat Completions API, requests.
 
-Questions are sent to the OpenAI Chat Completions API
+## Limitations and next steps
 
-A strict system instruction enforces:
+- **Measure the refusal behavior**: a set of answerable and unanswerable questions, scoring
+  correct answers, correct refusals, and the two failure modes (hallucinating, or refusing an
+  answerable question).
+- Return the supporting quote with each answer so a reader can check it.
+- Chunk and retrieve for documents larger than the context window; the later projects in the series
+  do this.
 
-Use only information stated in the PDF
+## License
 
-No assumptions or outside knowledge
-
-Explicit refusal when information is missing
-
-Deterministic Responses
-
-Temperature is set to 0 to reduce variability
-
-✅ Example Behavior
-
-In-document question
-Returns a factually grounded answer extracted from the PDF.
-
-Numeric lookup
-Returns exact numeric values when present in the document.
-
-Out-of-scope question
-Returns:
-“I cannot provide an answer as this information is not included in the PDF document.”
-
-⚙️ Technologies Used
-
-PDF Parsing: PyPDF
-
-LLM API: OpenAI Chat Completions (gpt-3.5-turbo)
-
-HTTP Client: Requests
-
-Prompt Control: Strict system-level grounding instructions
-
-🔑 API Key Handling
-
-The OpenAI API key is loaded securely from environment variables and is not hard-coded in the repository.
-
-▶️ How to Use
-
-Install the required dependencies
-
-Run the notebook
-
-Upload a PDF document
-
-Enter natural language questions about the document
-
-Receive answers strictly grounded in the PDF content
-
-⚠️ Limitations
-
-Entire PDF text is provided as context for each query
-
-Large documents may exceed model context limits
-
-No retrieval, chunking, or citation support yet
-
-Intended for research and educational use
-
-🚀 Future Improvements
-
-Add chunking and retrieval (RAG-style architecture)
-
-Return supporting text spans for each answer
-
-Index large documents for scalability
-
-Provide a simple interactive interface
+MIT
